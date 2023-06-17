@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>PDF Editor</title>
+</head>
+<body>
+  <h1>PDF Editor</h1>
+  <form id="uploadForm" enctype="multipart/form-data">
+    <input type="file" name="pdf" id="pdfInput" accept=".pdf">
+    <button type="submit">Upload PDF</button>
+  </form>
+  <div id="pdfContainer"></div>
+  <button id="rotateButton">Rotate 90° Clockwise</button>
+  <a id="downloadLink" href="#" download>Download Modified PDF</a>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+  <script>
+    var pdfDoc = null;
+    var pageNum = 1;
+    var pageRendering = false;
+    var scale = 1.5;
+
+    function renderPage(pageNumber) {
+      pageRendering = true;
+      var canvas = document.createElement('canvas');
+      var pdfContainer = document.getElementById('pdfContainer');
+      pdfContainer.innerHTML = '';
+      pdfContainer.appendChild(canvas);
+
+      var ctx = canvas.getContext('2d');
+
+      pdfDoc.getPage(pageNumber).then(function(page) {
+        var viewport = page.getViewport({ scale: scale });
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        var renderContext = {
+          canvasContext: ctx,
+          viewport: viewport
+        };
+
+        page.render(renderContext).promise.then(function() {
+          pageRendering = false;
+        });
+      });
+
+      document.getElementById('downloadLink').setAttribute('href', '');
+
+      if (pageNumber === 1) {
+        document.getElementById('rotateButton').disabled = false;
+      } else {
+        document.getElementById('rotateButton').disabled = true;
+      }
+    }
+
+    function loadPDF(url) {
+      pdfjsLib.getDocument(url).promise.then(function(pdfDoc_) {
+        pdfDoc = pdfDoc_;
+        renderPage(pageNum);
+      });
+    }
+
+    document.getElementById('uploadForm').addEventListener('submit', function(event) {
+      event.preventDefault();
+
+      var pdfInput = document.getElementById('pdfInput');
+      var file = pdfInput.files[0];
+
+      var fileReader = new FileReader();
+      fileReader.onload = function() {
+        var pdfData = new Uint8Array(fileReader.result);
+        loadPDF(pdfData);
+      };
+      fileReader.readAsArrayBuffer(file);
+    });
+
+    document.getElementById('rotateButton').addEventListener('click', function() {
+      if (pageRendering) {
+        return;
+      }
+      pageNum += 1;
+      renderPage(pageNum);
+    });
+  </script>
+</body>
+</html>
